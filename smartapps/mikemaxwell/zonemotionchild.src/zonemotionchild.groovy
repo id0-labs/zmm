@@ -1,19 +1,17 @@
-/**
- *  zoneMotionChild v 2.0.1 2015-12-30
- *
- *  Copyright 2015-10-20 Mike Maxwell
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
- *
- 	2.0.1 2015-12-30 fixed agg zone types incorrectly going inactive when a zone motion remained for longer than the timeout setting
- */
+/*
+	zoneMotionChild
+    
+ 	Author: Mike Maxwell 2016
+	    
+	This software if free for Private Use. You may use and modify the software without distributing it.
+ 
+	This software and derivatives may not be used for commercial purposes.
+	You may not distribute or sublicense this software.
+	You may not grant a sublicense to modify and distribute this software to third parties not included in the license.
+
+	Software is provided without warranty and the software author/license owner cannot be held liable for damages.        
+        
+*/
  
 definition(
     name: "zoneMotionChild",
@@ -31,29 +29,33 @@ preferences {
     page(name: "triggers", nextPage	: "main")
 }
 def installed() {
-	log.debug "Installed with settings: ${settings}"
-	//initialize()
 }
+
 def updated() {
-	log.debug "Updated with settings: ${settings}"
 	unsubscribe()
 	initialize()
 }
+
 def initialize() {
+	state.vChild = "1.0.0"
+    parent.updateVer(state.vChild)
 	state.nextRunTime = 0
 	state.zoneTriggerActive = false
 	subscribe(motionSensors, "motion.inactive", inactiveHandler)
     subscribe(motionSensors, "motion.active", activeHandler)
     app.updateLabel("${settings.zoneName} Zone Controller") 
-    def hub = location.hubs[0]
+    //log.info "location.hubs: ${location.hubs.first().hub.id}"
+    //def hub = location.hubs[0]
+    //def hub = location.hubs.first().hub
     def deviceID = "${app.id}"
     def zName = "mZone-${settings.zoneName}"
     def simMotion = getChildDevice(deviceID)
     if (!simMotion) {
-    	log.info "create the virtual motion sensor"
-        simMotion = addChildDevice("MikeMaxwell", "simulatedMotionSensor", deviceID, hub.id, [name: zName, label: zName, completedSetup: true])
+    	log.info "create virtual motion sensor ${zName}"
+        //simMotion = addChildDevice("MikeMaxwell", "simulatedMotionSensor", deviceID, hub.id, [name: zName, label: zName, completedSetup: true])
+        simMotion = addChildDevice("MikeMaxwell", "simulatedMotionSensor", deviceID, null, [name: zName, label: zName, completedSetup: true])
     } else {
-    	log.info "virtual motion sensor exists"
+    	log.info "virtual motion sensor ${zName} exists"
     }
     simMotion.inactive()
 }
@@ -64,7 +66,7 @@ def activityTimeoutHandler(evtTime,device){
     	def timeoutRemaining = (state.nextRunTime - evtTime) / 1000
         text = ", (${timeoutRemaining.toInteger()} seconds remaining)," 
     }
-    log.debug "Zone: ${simMotion.displayName} is active via [${device}]${text} zone timeout reset to ${timeout} seconds..."
+    log.debug "Zone: ${device} is active via [${device}]${text} zone timeout reset to ${timeout} seconds..."
     state.nextRunTime = evtTime + (timeout * 1000) 
     runIn(timeout,zoneOff)
 }
@@ -108,6 +110,7 @@ def anyTriggersActive(evtTime){
     //log.debug "anyTriggersActive - final:${enable}"
     return enable
 }
+
 def activeHandler(evt){
  
     log.trace "active handler fired via [${evt.displayName}] UTC: ${evt.date.format("yyyy-MM-dd HH:mm:ss")}"
@@ -141,11 +144,13 @@ def activeHandler(evt){
     	log.debug "modeOK: False"
     }
 }
+
 def inactiveHandler(evt){
 	if (settings.zoneType == "0" && allInactive()){
     	zoneOff()
     }
 }
+
 def zoneOn(){
     def simMotion = getChildDevice("${app.id}")
 	if (simMotion.currentValue("motion") != "active") {
@@ -153,6 +158,7 @@ def zoneOn(){
 		simMotion.active()
    	}
 }
+
 def zoneOff(){
     def simMotion = getChildDevice("${app.id}")
 	if (simMotion.currentValue("motion") != "inactive") {
@@ -173,16 +179,19 @@ def zoneOff(){
         }
     }
 }
+
 def allInactive() {
 	//log.debug "allInactive:${motionSensors.currentValue("motion")}"
 	def state = motionSensors.currentState("motion").every{ s -> s.value == "inactive"}
     //log.debug "allInactive: ${state}"
 	return state
 }
+
 def modeIsOK() {
 	def result = !modes || modes.contains(location.mode)
 	return result
 }
+
 /* page methods	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 def main(){
 	def installed = app.installationState == "COMPLETE"
@@ -195,15 +204,6 @@ def main(){
         ,uninstall	: installed
         ){
 		     section(){
-             	/*	
-                   input(
-                        name		: "simMotion"
-                        ,title		: "Virtual Motion Sensor for this Zone:"
-                        ,multiple	: false
-                        ,required	: false
-                        ,type		: "capability.motionSensor"
-                    )
-                  */  
                     input(
                         name		: "zoneName"
                         ,type		: "text"
@@ -231,6 +231,13 @@ def main(){
             if (zType){
                 section(){
                   	paragraph getDescription(zType)
+                    href (
+                    	url					: getURL(zType)
+                        , style				: "embedded"
+                        , required			: false
+                        , description		: "Tap to view the zone graphic..."
+                        , title				: ""
+					)                    
                 	//False motion reduction
                     if (zType == "0"){
             			input(
@@ -286,6 +293,7 @@ def main(){
             } //end section optional settings
 	}
 }
+
 def triggers(){
 	return dynamicPage(
     	name		: "triggers"
@@ -316,6 +324,7 @@ def triggers(){
 			}
 		}
 }
+
 def triggerPageComplete(){
 	if (triggerMotions || triggerContacts || triggerSwitches){
     	return "complete"
@@ -323,6 +332,21 @@ def triggerPageComplete(){
     	return null
     }
 }
+
+def getURL(zType){
+   switch (zType) {
+		case "0":
+			return	"https://raw.githubusercontent.com/MikeMaxwell/zmm/master/falseReduction.png" 
+			break
+		case "1":
+			return	"https://raw.githubusercontent.com/MikeMaxwell/zmm/master/aggregation.png" 
+            break
+		case "2":
+			return	"https://raw.githubusercontent.com/MikeMaxwell/zmm/master/triggered.png" 
+            break
+ 	}
+}
+
 def getDescription(zType){
    switch (zType) {
 		case "0":

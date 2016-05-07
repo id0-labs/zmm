@@ -2,6 +2,8 @@
 	zoneMotionChild
     
  	Author: Mike Maxwell 2016
+    
+    1.0.0a 2016-05-07	Fetch correct hub id when creating child device
 	    
 	This software if free for Private Use. You may use and modify the software without distributing it.
  
@@ -36,24 +38,33 @@ def updated() {
 	initialize()
 }
 
+def getHubID(){
+    def hubID
+    if (myHub){
+        hubID = myHub.id
+    } else {
+        def hubs = location.hubs.findAll{ it.type == physicalgraph.device.HubType.PHYSICAL } 
+        //log.debug "hub count: ${hubs.size()}"
+        if (hubs.size() == 1) hubID = hubs[0].id 
+    }
+    //log.debug "hubID: ${hubID}"
+    return hubID
+}
+
 def initialize() {
-	state.vChild = "1.0.0"
+	state.vChild = "1.0.0a"
     parent.updateVer(state.vChild)
 	state.nextRunTime = 0
 	state.zoneTriggerActive = false
 	subscribe(motionSensors, "motion.inactive", inactiveHandler)
     subscribe(motionSensors, "motion.active", activeHandler)
     app.updateLabel("${settings.zoneName} Zone Controller") 
-    //log.info "location.hubs: ${location.hubs.first().hub.id}"
-    //def hub = location.hubs[0]
-    //def hub = location.hubs.first().hub
     def deviceID = "${app.id}"
     def zName = "mZone-${settings.zoneName}"
     def simMotion = getChildDevice(deviceID)
     if (!simMotion) {
     	log.info "create virtual motion sensor ${zName}"
-        //simMotion = addChildDevice("MikeMaxwell", "simulatedMotionSensor", deviceID, hub.id, [name: zName, label: zName, completedSetup: true])
-        simMotion = addChildDevice("MikeMaxwell", "simulatedMotionSensor", deviceID, null, [name: zName, label: zName, completedSetup: true])
+        simMotion = addChildDevice("MikeMaxwell", "simulatedMotionSensor", deviceID, getHubID(), [name: zName, label: zName, completedSetup: true])
     } else {
     	log.info "virtual motion sensor ${zName} exists"
     }
@@ -204,7 +215,17 @@ def main(){
         ,uninstall	: installed
         ){
 		     section(){
-                    input(
+                 	if (getHubID() == null){
+                    	input(
+                        	name		: "myHub"
+                        	,type		: "hub"
+                        	,title		: "Select your hub"
+                        	,multiple		: false
+                        	,required		: true
+                        	,submitOnChange	: false
+                    	)
+                 	}
+                 	input(
                         name		: "zoneName"
                         ,type		: "text"
                         ,title		: "Name of this Zone:"

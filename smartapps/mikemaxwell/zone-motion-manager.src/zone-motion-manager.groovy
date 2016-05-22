@@ -61,7 +61,7 @@ def updated() {
 }
 
 def initialize() {
-	state.vParent = "1.0.0"
+	state.vParent = "2.0.0"
 }
 def getVersionInfo(){
 	return "Versions:\n\tZone Motion Manager: ${state.vParent ?: "No data available yet."}\n\tZone Configuration: ${state.vChild ?: "No data available yet."}"

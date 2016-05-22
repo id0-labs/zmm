@@ -3,7 +3,7 @@
     
  	Author: Mike Maxwell 2016
     
-    1.0.0a 2016-05-07	Fetch correct hub id when creating child device
+    2.0.0a 2016-05-07	Fetch correct hub id when creating child device
 	    
 	This software if free for Private Use. You may use and modify the software without distributing it.
  
@@ -52,7 +52,7 @@ def getHubID(){
 }
 
 def initialize() {
-	state.vChild = "1.0.0a"
+	state.vChild = "2.0.0a"
     parent.updateVer(state.vChild)
 	state.nextRunTime = 0
 	state.zoneTriggerActive = false
